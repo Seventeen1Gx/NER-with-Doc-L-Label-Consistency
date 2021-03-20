@@ -116,10 +116,6 @@ class Data:
 
         self.max_read_memory = int(args.max_read_memory)
 
-        self.m2_iteration = int(args.m2_iteration)
-        self.m2_hidden_dim = int(args.m2_hidden_dim)
-        self.num_actions = int(args.num_actions)
-
         self.clip_grad = float(args.clip_grad)
         self.l2 = float(args.l2)
         self.optimizer = args.optimizer
