@@ -87,6 +87,9 @@ class Env(object):
             batch_char, batch_charlen, batch_charrecover, batch_label, mask, doc_idx, word_idx \
                 = batchify_with_label(instance, self.data.use_gpu, True)
 
+            batch_size = mask.size(0)  # 句子数
+            seq_len = mask.size(1)  # 最长句子长度
+
             mask = mask.eq(1)
             p, lstm_out, outs, word_represent = model.MC_sampling(batch_word, batch_wordlen, batch_char,
                                                                   batch_charlen,
@@ -109,8 +112,6 @@ class Env(object):
             outs_result = []
             uncertainty_result = []
 
-            batch_size = mask.size(0)  # 句子数
-            seq_len = mask.size(1)  # 最长句子长度
             for idx in range(batch_size):
                 for idy in range(seq_len):
                     if mask[idx][idy] != 0:
