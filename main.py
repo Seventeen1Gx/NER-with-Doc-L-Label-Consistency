@@ -383,7 +383,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--train_base_model', type=bool, default=False, help='whether to train base model'
                                                                              'if not, load base model from model dir')
-    parser.add_argument('--train_DQN', type=bool, default=True, help='whether to train DQN'
+    parser.add_argument('--train_DQN', type=bool, default=False, help='whether to train DQN'
                                                                       'if not, load DQN from model dir')
 
     # 解析命令行参数
