@@ -12,6 +12,11 @@ class DQN(nn.Module):
 
         self.output_layer = nn.Linear(hidden_dim, num_actions)
 
+        if torch.cuda.is_available():
+            self.liner_layer1 = self.liner_layer1.cuda()
+            self.liner_layer2 = self.liner_layer2.cuda()
+            self.output_layer = self.output_layer.cuda()
+
     def forward(self, x):
         x = torch.relu(self.liner_layer1(x))
         x = torch.relu(self.liner_layer2(x))

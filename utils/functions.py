@@ -2,6 +2,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 import sys
 import numpy as np
+import torch
 
 
 def normalize_word(word):
@@ -223,6 +224,171 @@ def load_pretrain_emb(embedding_path):
 def norm2one(vec):
     root_sum_square = np.sqrt(np.sum(np.square(vec)))
     return vec/root_sum_square
+
+
+# input_batch_list: data.train_Ids[start:end]，一个 batch 使用 [start:end) 这些文档
+# gpu: 是否使用 gpu
+# if_train: 是否用来训练
+# 经过此方法，输入就变成了句子级别的，并且长句在前
+def batchify_with_label(input_batch_list, gpu, if_train=False):
+    # 多维列表根据项目拆分成多个多维列表
+    # input_batch_list: 文档数 × 句子数 × [word_Ids, char_Ids, label_Ids, word_idx, d_idx]
+
+    # 文档数 × 句子数 × [word_Ids]
+    words = [[sent[0] for sent in doc] for doc in input_batch_list]
+    # 文档数 × 句子数 × [char_Ids]
+    chars = [[sent[1] for sent in doc] for doc in input_batch_list]
+    # 文档数 × 句子数 × [label_Ids]
+    labels = [[sent[2] for sent in doc] for doc in input_batch_list]
+    # 文档数 × 句子数 × [word_idx]
+    word_idx = [[sent[3] for sent in doc] for doc in input_batch_list]
+    # 文档数 × 句子数 × (doc_idx,)
+    doc_idx = [[sent[4] for sent in doc] for doc in input_batch_list]
+    # map: 以 w 中的每一个元素调用 len 函数，返回包含每次 len 函数返回值的新列表
+    # w: 句子数 × [100, 999, 500, 400, 500]
+    # list(map(len, w)): [222, 400] -- 这篇文档两句话，长度分别是 222 和 400
+    # seq_lengths: 文档数 × 句子数
+    seq_lengths = [list(map(len, w)) for w in words]
+
+    # [len(w) for w in words]: 元素个数为文档数，每个元素值是文档的句子数
+    # batch_size: [start:end) 这些文档的总句子数
+    batch_size = sum([len(w) for w in words])
+    # max(文档数 ×(每篇文档最长句子的长度,)): 当前 batch 中最长句子的长度
+    max_seq_len = max([max(list(map(len, w))) for w in words])
+
+    # 首先声明 tensor 的大小
+    # 然后填充 tensor 的值
+
+    # 总句子数 × 最长句子长度，记录句子中单词在 alphabet 中的 index
+    word_seq_tensor = torch.zeros((batch_size, max_seq_len), requires_grad=if_train).long()
+    # 总句子数，记录每个句子的长度
+    word_seq_lengths = torch.zeros((batch_size,), requires_grad=if_train).long()
+    # 总句子数 × 最长句子长度，记录句子中单词的 label 在 alphabet 中的 index
+    label_seq_tensor = torch.zeros((batch_size, max_seq_len), requires_grad=if_train).long()
+    # 总句子数，记录每个句子属于哪个文档（从 0 开始）
+    doc_idx_tensor = torch.zeros((batch_size,), requires_grad=if_train).long()
+    # 总句子数 × 最长句子长度，记录句子中单词在文档中的 index（从 1 开始）
+    word_idx_tensor = torch.zeros((batch_size, max_seq_len), requires_grad=if_train).long()
+    # 总句子数 × 最长句子长度（用来判断 tonsor 中哪里是有效值，哪里是无效值，因为句子长短不一致）
+    mask = torch.zeros((batch_size, max_seq_len), requires_grad=if_train).byte()
+
+    # 句子计数
+    idx = 0
+    # zip() 函数用于将可迭代的对象作为参数，将对象中对应的元素打包成一个个元组，然后返回由这些元组组成的列表
+    # zip(words, labels, seq_lengths, doc_idx, word_idx) 返回列表中的一个元素如下
+    # (words 的一个元素，labels 的一个元素，seq_lengths 的一个元素，doc_idx 的一个元素，word_idx 的一个元素)
+    # 句子数 × [word_Ids]
+    # 句子数 × [label_Ids]
+    # 句子数 × (seq_len,)
+    # 句子数 × (doc_idx,)
+    # 句子数 × [word_idx]
+    # 第一个循环遍历文档
+    for doc_seq, doc_label, doc_seqlen, doc_i, word_i in zip(words, labels, seq_lengths, doc_idx, word_idx):
+        # 第二个循环遍历文档中的句子
+        # [word_Ids]
+        # [label_Ids]
+        # (seq_len,)
+        # (doc_idx,)
+        # [word_idx]
+        for seq, label, seqlen, dix, wix in zip(doc_seq, doc_label, doc_seqlen, doc_i, word_i):
+            word_seq_lengths[idx] = seqlen
+            word_seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
+            label_seq_tensor[idx, :seqlen] = torch.LongTensor(label)
+            mask[idx, :seqlen] = torch.Tensor([1] * seqlen)
+            doc_idx_tensor[idx] = dix
+            word_idx_tensor[idx, :seqlen] = torch.LongTensor(wix)
+            idx += 1
+    # sort by len
+    # 0 表示按第 0 维排，返回排序后的结果和排序后的结果在之前列表的下标，是一个排列
+    word_seq_lengths, word_perm_idx = word_seq_lengths.sort(0, descending=True)
+    word_seq_tensor = word_seq_tensor[word_perm_idx]
+    label_seq_tensor = label_seq_tensor[word_perm_idx]
+    mask = mask[word_perm_idx]
+    doc_idx_tensor = doc_idx_tensor[word_perm_idx]
+    word_idx_tensor = word_idx_tensor[word_perm_idx]
+
+    # deal with char
+    flatten_chars = []  # [char_Ids, ...] 元素个数为总句子数
+    for doc in chars:
+        for sent in doc:
+            flatten_chars.append(sent)
+    # char_Ids: [[[i]],[[l][o][v][e]],[[y][o][u]],[[!]]]
+    # pad_chars (batch_size, max_seq_len)
+    # 总句子数 × [[[i]], [[l][o][v][e]], [[y][o][u]], [[!]], [[0]], ...]
+    pad_chars = [flatten_chars[idx] + [[0]] * (max_seq_len - len(flatten_chars[idx]))
+                 for idx in range(len(flatten_chars))]
+    # 总句子数 × [1, 4, 3, 1, ...]
+    length_list = [list(map(len, pad_char)) for pad_char in pad_chars]
+    # 最长单词的字符数
+    max_word_len = max(map(max, length_list))
+    # 总句子数 × 最大句子长度 × 最大单词长度
+    char_seq_tensor = torch.zeros((batch_size, max_seq_len, max_word_len), requires_grad=if_train).long()
+    # 总句子数 × 最大句子长度 × (字符数,)
+    char_seq_lengths = torch.LongTensor(length_list)
+    # 第一层循环遍历句子
+    for idx, (seq, seqlen) in enumerate(zip(pad_chars, char_seq_lengths)):
+        # seq: [[[i]], [[l][o][v][e]], [[y][o][u]], [[0]], ...]
+        # seq_len: [1, 4, 3, 1, ...]
+        # 第二层循环遍历单词
+        for idy, (word, wordlen) in enumerate(zip(seq, seqlen)):
+            # word: [[l][o][v][e]]
+            # wordlen: 4
+            char_seq_tensor[idx, idy, :wordlen] = torch.LongTensor(word)
+
+    # 按句子长度降序后
+    # 转化成 (最大句子长度 × 单词数) × 最大单词长度
+    char_seq_tensor = char_seq_tensor[word_perm_idx].view(batch_size * max_seq_len, -1)
+    char_seq_lengths = char_seq_lengths[word_perm_idx].view(batch_size * max_seq_len, )
+    # 按单词长度降序
+    char_seq_lengths, char_perm_idx = char_seq_lengths.sort(0, descending=True)
+    char_seq_tensor = char_seq_tensor[char_perm_idx]
+
+    # 恢复原来的句子顺序要用的 indices
+    _, char_seq_recover = char_perm_idx.sort(0, descending=False)
+    _, word_seq_recover = word_perm_idx.sort(0, descending=False)
+
+    # 所有 tensor 转成 cuda 计算
+    if gpu:
+        word_seq_tensor = word_seq_tensor.cuda()
+        word_seq_lengths = word_seq_lengths.cuda()
+        word_seq_recover = word_seq_recover.cuda()
+        label_seq_tensor = label_seq_tensor.cuda()
+        char_seq_tensor = char_seq_tensor.cuda()
+        char_seq_recover = char_seq_recover.cuda()
+        mask = mask.cuda()
+        doc_idx_tensor = doc_idx_tensor.cuda()
+        word_idx_tensor = word_idx_tensor.cuda()
+    # 返回一群 tensor 和恢复顺序的 indices
+    return word_seq_tensor, word_seq_lengths, word_seq_recover, char_seq_tensor, char_seq_lengths, \
+           char_seq_recover, label_seq_tensor, mask, doc_idx_tensor, word_idx_tensor
+
+
+# 计算不确定度
+def epistemic_uncertainty(p, mask):
+    """
+    calculate epistemic_uncertainty
+    :param p: (batch, max_seq_len, num_labels)
+    :param mask: (batch,max_seq_len) 1 means the position is valid (not masked).
+    :return:  (batch, max_seq_len)
+    """
+    # (batch, max_seq_len)
+    # -Σplogp
+    hp = -((p + 1e-30) * (p + 1e-30).log()).sum(-1)
+    # 无效位置 0
+    hp = hp.masked_fill(mask == 0, 0)
+    return hp
+
+
+# outs: 总句子数 × 句子长度 × label_alphabet_size -- 标签分布
+def decode_seq(outs, mask):
+    # 最后一维，替换为这一维最大值的 index
+    # 即对应 label_alphabet 中的下标，就是对应 token 的 label
+    preds = outs.argmax(-1)  # 总句子数 × 句子长度
+    # masked_fill(mask, value): 用 value 填充 tensor 中与 mask 中值为 T 位置相对应的元素。
+    # 因为 preds 得到的结果中，无效位可能不是 0 了，现在要重新置 0
+    preds = preds.masked_fill(~mask, 0)  # mask padding words
+    return preds
+
 
 
 if __name__ == '__main__':

@@ -37,6 +37,15 @@ def dqn_learn(env, optimizer_spec=optimizer):
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
 
     for epoch_id in range(EPOCHS):
-        pass
+        # 环境初始化
+        observation = env.reset()
+
+        # 选择动作
+
+        # 每训练 10000 步，进行一次评估
+        if epoch_id % 10000:
+            pass
+
+
 
 
