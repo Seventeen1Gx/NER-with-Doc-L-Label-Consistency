@@ -410,9 +410,7 @@ if __name__ == '__main__':
             data.read_config(args)
 
             # 创建模型保存文件夹，并通过 uuid 避免覆盖
-            import uuid
-
-            uid = uuid.uuid4().hex[:6]
+            uid = time.strftime("%Y%m%d%H%M%S", time.localtime())
             data.model_dir = data.model_dir + "_" + uid
             print("model dir: %s" % uid)
             if not os.path.exists(data.model_dir):
