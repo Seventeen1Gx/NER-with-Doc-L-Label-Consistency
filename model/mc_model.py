@@ -80,7 +80,7 @@ class MCmodel(nn.Module):
             # 进入之前使用一个 dropout
             ordered_x = add_dropout(ordered_x, self.model1_in_dropout)
             # 总句子数 × sent_len × input_size
-            pack_input = pack_padded_sequence(ordered_x, ordered_lens, batch_first=True)
+            pack_input = pack_padded_sequence(ordered_x, ordered_lens.cpu(), batch_first=True)
             pack_output, _ = lstm(pack_input)
             ordered_x, _ = pad_packed_sequence(pack_output, batch_first=True)
 
