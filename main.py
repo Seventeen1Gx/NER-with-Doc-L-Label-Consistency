@@ -324,7 +324,7 @@ def load_model_decode(data):
 
 
 def train_mc_model(data):
-    print("Training model...")
+    print("Training base model...")
     # 打印 data 总览
     data.show_data_summary()
     save_data_name = data.model_dir + "/data.dset"
@@ -544,10 +544,10 @@ if __name__ == '__main__':
     parser.add_argument('--lr_decay', default=0.05)
     parser.add_argument('--momentum', default=0.9)
 
-    parser.add_argument('--train_base_model', default=False, help='whether to train base model'
-                                                                  'if not, load base model from model dir')
-    parser.add_argument('--train_DQN', default=False, help='whether to train DQN'
-                                                           'if not, load DQN from model dir')
+    parser.add_argument('--train_base_model', type=bool, default=False, help='whether to train base model'
+                                                                             'if not, load base model from model dir')
+    parser.add_argument('--train_DQN', type=bool, default=False, help='whether to train DQN'
+                                                                      'if not, load DQN from model dir')
 
     # 解析命令行参数
     args = parser.parse_args()
@@ -595,9 +595,13 @@ if __name__ == '__main__':
             train_mc_model(data)
             print("model dir: %s" % uid)
 
-        # 强化学习训练
-        env = Env(data)
-        dqn_learn(env)
+        if args.train_DQN:
+            # 强化学习训练
+            if args.train_base_model:
+                env = Env(data=data)
+            else:
+                env = Env(model_dir=args.model_dir)
+            dqn_learn(env)
 
     if args.status == 'decode':
         print("MODE: decode")

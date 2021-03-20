@@ -28,7 +28,6 @@ optimizer = OptimizerSpec(
     )
 
 
-# 使用 conll2003 的训练集和开发集进行强化学习 Agent 的训练
 def dqn_learn(env, optimizer_spec=optimizer):
     # 用训练好的模型 1 来对训练集+开发集进行结果预测
 
