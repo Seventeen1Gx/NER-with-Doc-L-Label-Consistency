@@ -207,7 +207,7 @@ class Data:
     # 没在文件中出现的 token，其 embedding 使用均匀分布生成
     def build_pretrain_emb(self):
         if self.word_emb_dir:
-            print("Load pretrain word embedding, norm: %s, dir: %s" % self.norm_word_emb, self.word_emb_dir)
+            print("Load pretrain word embedding, norm: %s, dir: %s" % (self.norm_word_emb, self.word_emb_dir))
             self.pretrain_word_embedding, self.word_emb_dim = build_pretrain_embedding(self.word_emb_dir,
                                                                                        self.word_alphabet,
                                                                                        self.word_emb_dim,
