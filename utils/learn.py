@@ -24,8 +24,6 @@ DQN_HIDDEN_DIM2 = 500
 NUM_ACTIONS = 19
 
 GAMMA = 0.9
-INITIAL_EPSILON = 1000000
-FINAL_EPSILON = 0.1
 REPLAY_SIZE = 1000000
 BATCH_SIZE = 32
 REPLACE_TARGET_FREQ = 10000
@@ -42,7 +40,7 @@ optimizer = OptimizerSpec(
 
 
 def dqn_learn(env,
-              exploration=LinearSchedule(INITIAL_EPSILON, FINAL_EPSILON),
+              exploration=LinearSchedule(1000000, 0.1),
               optimizer_spec=optimizer):
     # 初始化
     Q = DQN(STATE_VEC_DIM, DQN_HIDDEN_DIM1, DQN_HIDDEN_DIM2, NUM_ACTIONS)
@@ -55,6 +53,7 @@ def dqn_learn(env,
     num_param_updates = 0
 
     for epoch_id in range(EPOCHS):
+        print("\n ###### Epoch: %s/%s ######" % (epoch_id, EPOCHS))
         # 环境初始化
         observation = env.reset()
         while True:
@@ -68,7 +67,13 @@ def dqn_learn(env,
             else:
                 action = np.random.randint(NUM_ACTIONS)
             # 执行动作
+            print("------------------------------")
+            print("当前执行的动作是 %s" % action)
             reward, new_obs, done, _ = env.step(action)
+            if not done:
+                print("获得的奖励是 %s" % reward)
+            else:
+                print("已处理完所有文档")
 
             replay_buffer.append((observation, action, reward, new_obs, done))
             if len(replay_buffer) > REPLAY_SIZE:
@@ -80,7 +85,7 @@ def dqn_learn(env,
                 break
 
             if len(replay_buffer) > BATCH_SIZE:
-                # 训练 Q 网络
+                print("执行经验回放")
 
                 # 首先准备输入数据
                 minibatch = random.sample(replay_buffer, BATCH_SIZE)
@@ -89,17 +94,23 @@ def dqn_learn(env,
                 reward_batch = [data[2] for data in minibatch]
                 next_state_batch = [data[3] for data in minibatch]
                 done_batch = [data[4] for data in minibatch]
-
+                # 第一维是 batch_size
                 state_tensor = torch.tensor(state_batch).type(dtype)
                 action_tensor = torch.tensor(action_batch).type(dlongtype)
                 reward_tensor = torch.tensor(reward_batch).type(dtype)
+                # 归一化
                 reward_tensor = (reward_tensor - reward_tensor.mean()) / (reward_tensor.std() + 1e-7)
                 next_state_tensor = torch.tensor(next_state_batch).type(dtype)
                 done_tensor = torch.tensor(done_batch).type(dtype)
 
                 # Q 网络得到的估计值
                 q_values = Q(state_tensor)
+                # action_tensor 的 shape 是 [32]
+                # action_tensor.unsqueeze(1) 是 [32, 1]
+                # q_values 是 [32, 19]
+                # gather 就是取出 action_tensor 对应的动作的 Q 值
                 q_s_a = q_values.gather(1, action_tensor.unsqueeze(1))
+                # q_s_a 变成 [32]
                 q_s_a = q_s_a.squeeze()
 
                 # 目标值

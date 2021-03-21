@@ -46,8 +46,8 @@ class Env(object):
         self.train_doc_total_num = len(self.train_Ids)
         self.test_doc_total_num = len(self.test_Ids)
 
-        # print("训练集文章数为 %s" % self.train_doc_total_num)
-        # print("测试集文章数为 %s" % self.test_doc_total_num)
+        print("训练集文章数为 %s" % self.train_doc_total_num)
+        print("测试集文章数为 %s" % self.test_doc_total_num)
 
         # 当前处理的文档
         self.cur_doc_idx = -1
@@ -93,19 +93,23 @@ class Env(object):
         info = None
 
         if -1 < action < 17:
+            print("当前单词的正确标签是 %s" % self.gold_label_result[self.cur_word_idx])
+            print("当前单词的预测标签是 %s" % self.pred_label_result[self.cur_word_idx])
+            print("当前单词的要变成的标签是 %s" % (action + 1))
+
             # 当前标签变为 action+1
-            reward += 1 if self.pred_label_result[self.cur_word_idx] \
-                != self.gold_label_result[self.cur_word_idx] else 0
+            reward += -1 if self.pred_label_result[self.cur_word_idx] \
+                == self.gold_label_result[self.cur_word_idx] else 0
             self.pred_label_result[self.cur_word_idx] = action + 1
             reward += 1 if self.pred_label_result[self.cur_word_idx] \
                 == self.gold_label_result[self.cur_word_idx] else 0
         elif action == 17:
             # 拒绝
-            # 切换下一个参考单词
+            print("切换下一个参考单词")
             done = self.next_reference(if_train)
         elif action == 18:
             # 停止
-            # 处理下一个单词
+            print("处理下一个单词")
             done = self.next_word(if_train)
 
         if not done:
@@ -206,8 +210,8 @@ class Env(object):
         # 当前文档单词总数
         self.cur_doc_word_total_num = len(self.pred_label_result)
 
-        # print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
-        #       (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
+        print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
+              (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
 
         # 切换单词
         return self.next_word(if_train)
@@ -218,8 +222,7 @@ class Env(object):
         self.cur_word_reference_idx = -1
 
         if self.cur_word_idx == self.cur_doc_word_total_num:
-            # 表明当前文档处理完毕
-            # 切换下篇文档
+            print("当前文档单词处理完毕，处理下一篇文档")
             return self.next_doc(if_train)
 
         self.cur_word_reference = self.word_mat[self.cur_doc_num][self.cur_word_idx + 1]
@@ -229,10 +232,11 @@ class Env(object):
             self.cur_word_reference_num = self.max_read_memory
         # 跳过单独出现的单词
         if self.cur_word_reference_num == 0:
+            print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
             return self.next_word(if_train)
 
-        # print("当前处理第 %s 个单词，其有 %s 个参考单词" %
-        #      (self.cur_word_idx, self.cur_word_reference_num))
+        print("当前处理第 %s 个单词，其有 %s 个参考单词" %
+              (self.cur_word_idx, self.cur_word_reference_num))
 
         return self.next_reference(if_train)
 
@@ -240,5 +244,8 @@ class Env(object):
     def next_reference(self, if_train=True):
         self.cur_word_reference_idx += 1
         if self.cur_word_reference_idx == self.cur_word_reference_num:
+            print("当前单词已参考完全部单词，切换下一个单词")
             return self.next_word(if_train)
+        print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
+
         return False
