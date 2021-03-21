@@ -115,7 +115,7 @@ def evaluate(data, model, name):
             # 将数据 instances[start:end] batchify
             batch_word, batch_wordlen, batch_wordrecover, \
             batch_char, batch_charlen, batch_charrecover, batch_label, mask, doc_idx, word_idx \
-                = batchify_with_label(instance, data.use_gpu, True)
+                = batchify_with_label(instance, data.use_gpu, False)
 
             mask = mask.eq(1)  # 转化为 T/F
             # 重复多次获得结果，再取平均
@@ -383,8 +383,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--train_base_model', type=bool, default=False, help='whether to train base model'
                                                                              'if not, load base model from model dir')
-    parser.add_argument('--train_DQN', type=bool, default=False, help='whether to train DQN'
-                                                                      'if not, load DQN from model dir')
+    parser.add_argument('--train_DQN', type=bool, default=True, help='whether to train DQN'
+                                                                     'if not, load DQN from model dir')
 
     # 解析命令行参数
     args = parser.parse_args()
@@ -431,11 +431,11 @@ if __name__ == '__main__':
             print("model dir: %s" % uid)
 
         if args.train_DQN:
-            args.model_dir = 'outs_20210319'
             # 强化学习训练
             if args.train_base_model:
                 env = Env(data=data)
             else:
+                args.model_dir = 'outs_20210320222115'  # 实际使用时，该参数从命令行获取
                 env = Env(model_dir=args.model_dir)
             dqn_learn(env)
 
@@ -450,7 +450,7 @@ if __name__ == '__main__':
         # 从要进行 decode 的数据生成实例
         data.generate_instance('raw')
 
-        # 开始 decode 操作
+        # 基模型开始 decode 操作
         load_model_decode(data)
 
 # nvidia-smi -l  查看 GPU 使用情况，-l 表示每秒显示一次

@@ -390,7 +390,6 @@ def decode_seq(outs, mask):
     return preds
 
 
-
 if __name__ == '__main__':
     a = np.arange(9.0)
     print(a)
