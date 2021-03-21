@@ -38,6 +38,8 @@ class Env(object):
         # 用来寻找同一篇文章中一个单词的其他出现位置
         self.word_mat = self.data.word_mat
 
+        self.max_read_memory = self.data.max_read_memory
+
         # 数据集
         self.train_Ids = self.data.train_Ids + self.data.dev_Ids
         self.test_Ids = self.data.test_Ids
@@ -224,7 +226,7 @@ class Env(object):
         try:
             self.cur_word_reference_num = self.cur_word_reference.tolist().index(0)
         except ValueError:
-            self.cur_word_reference_num = len(self.cur_word_reference)
+            self.cur_word_reference_num = self.max_read_memory
         # 跳过单独出现的单词
         if self.cur_word_reference_num == 0:
             return self.next_word(if_train)
@@ -237,6 +239,6 @@ class Env(object):
     # 切换参考单词
     def next_reference(self, if_train=True):
         self.cur_word_reference_idx += 1
-        if self.cur_word_reference[self.cur_word_reference_idx] == 0:
+        if self.cur_word_reference_idx == self.cur_word_reference_num:
             return self.next_word(if_train)
         return False
