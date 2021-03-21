@@ -435,7 +435,7 @@ if __name__ == '__main__':
             if args.train_base_model:
                 env = Env(data=data)
             else:
-                args.model_dir = 'outs_20210320222115'  # 实际使用时，该参数从命令行获取
+                # args.model_dir = 'outs_20210320222115'  # 实际使用时，该参数从命令行获取
                 env = Env(model_dir=args.model_dir)
             dqn_learn(env)
 
