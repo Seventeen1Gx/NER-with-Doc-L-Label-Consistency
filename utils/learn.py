@@ -1,4 +1,5 @@
 import random
+import time
 from collections import namedtuple, deque
 
 import torch
@@ -54,6 +55,7 @@ def dqn_learn(env,
 
     for epoch_id in range(EPOCHS):
         print("\n ###### Epoch: %s/%s ######" % (epoch_id, EPOCHS))
+        start = time.time()
         # 环境初始化
         observation = env.reset()
         while True:
@@ -99,7 +101,7 @@ def dqn_learn(env,
                 action_tensor = torch.tensor(action_batch).type(dlongtype)
                 reward_tensor = torch.tensor(reward_batch).type(dtype)
                 # 归一化
-                reward_tensor = (reward_tensor - reward_tensor.mean()) / (reward_tensor.std() + 1e-7)
+                # reward_tensor = (reward_tensor - reward_tensor.mean()) / (reward_tensor.std() + 1e-7)
                 next_state_tensor = torch.tensor(next_state_batch).type(dtype)
                 done_tensor = torch.tensor(done_batch).type(dtype)
 
@@ -129,7 +131,8 @@ def dqn_learn(env,
                 num_param_updates += 1
                 if num_param_updates % REPLACE_TARGET_FREQ == 0:
                     Q_target.load_state_dict(Q.state_dict())
-
+        end = time.time()
+        print("Epoch %s  Time: %.2f s" % (epoch_id, end - start))
         # 每训练 10000 步，进行一次评估
         if epoch_id % 10000:
             observation = env.reset(False)
