@@ -135,6 +135,7 @@ class Env(object):
                 print("当前处理第 %s 个单词" % self.cur_word_idx)
                 print("该单词可以参考的单词数", self.cur_word_reference_num)
                 print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
+                self.time_step = 0
 
         return reward, new_state, done, info
 
@@ -257,7 +258,7 @@ class Env(object):
                 # print("当前文档单词处理完毕，处理下一篇文档")
                 return self.next_doc(if_train)
 
-        while (not if_train) and self.uncertainty_result[[self.cur_word_idx]] < self.threshold:
+        while (not if_train) and self.uncertainty_result[self.cur_word_idx] < self.threshold:
             # print("测试时，跳过不确定度低的单词")
             self.cur_word_idx += 1
             self.cur_word_reference_idx = -1
