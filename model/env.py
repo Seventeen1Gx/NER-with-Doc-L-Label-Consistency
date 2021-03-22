@@ -125,6 +125,10 @@ class Env(object):
             # print("处理下一个单词")
             done = self.next_word(if_train)
 
+        self.action_num += 1
+        if (not if_train) and self.action_num == 50:
+            done = self.next_word(if_train)
+
         if not done:
             new_state = self.get_state()
         else:
@@ -140,11 +144,6 @@ class Env(object):
             print("当前处理第 %s 个单词" % self.cur_word_idx)
             print("该单词可以参考的单词数", self.cur_word_reference_num, end=' ')
             print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
-
-        self.action_num += 1
-        if (not if_train) and self.action_num == 100:
-            print("测试阶段：当前单词处理动作数超过了 100 个，切换下一个单词")
-            done = self.next_word(if_train)
 
         return reward, new_state, done, info
 
