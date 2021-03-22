@@ -129,9 +129,10 @@ class Env(object):
             new_state = self.get_state()
         else:
             info = (self.gold_results, self.pred_results)
+            new_state = self.end_state
 
         self.time_step += 1
-        if self.time_step % 1000 == 0:
+        if self.time_step % 10000 == 0:
             print("---------- Time Step %s ----------" % self.time_step)
             print("当前处理的文档数为", self.train_doc_total_num if if_train else self.test_doc_total_num, end=' ')
             print("当前处理第 %s 篇文档" % self.cur_doc_idx)
@@ -140,8 +141,9 @@ class Env(object):
             print("该单词可以参考的单词数", self.cur_word_reference_num, end=' ')
             print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
 
+        self.action_num += 1
         if (not if_train) and self.action_num == 100:
-            print("当前单词处理动作数超过了 100 个，切换下一个单词")
+            print("测试阶段：当前单词处理动作数超过了 100 个，切换下一个单词")
             done = self.next_word(if_train)
 
         return reward, new_state, done, info
