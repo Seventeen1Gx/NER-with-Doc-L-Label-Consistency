@@ -35,6 +35,8 @@ class Env(object):
         # 设置 model 为评估模式
         self.model.eval()
 
+        self.label_alphabet = self.data.label_alphabet
+
         # 用来寻找同一篇文章中一个单词的其他出现位置
         self.word_mat = self.data.word_mat
 
@@ -82,7 +84,7 @@ class Env(object):
         self.time_step = -1
 
         # 当前处理单词执行过的 action 数
-        self.action_num = 0
+        self.action_num = -1
 
     # 环境初始化
     # 返回初始状态向量
@@ -101,7 +103,6 @@ class Env(object):
 
     def step(self, action, if_train=True):
         reward = -0.1
-        new_state = None
         done = False
         info = None
 
@@ -126,13 +127,13 @@ class Env(object):
             done = self.next_word(if_train)
 
         self.action_num += 1
-        if (not if_train) and self.action_num == 50:
+        if (not if_train) and self.action_num == 20:
             done = self.next_word(if_train)
 
         if not done:
             new_state = self.get_state()
         else:
-            info = (self.gold_results, self.pred_results)
+            info = (self.label_recover())
             new_state = self.end_state
 
         self.time_step += 1
@@ -300,3 +301,17 @@ class Env(object):
         # print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
 
         return False
+
+    # 将 index 切换成真实的标签
+    def label_recover(self):
+        new_pred_results = []
+        new_gold_results = []
+
+        for idx in range(len(self.pred_results)):
+            pred = [self.label_alphabet.get_instance(self.pred_results[idx][idy]) for idy in range(len(self.pred_results[idx]))]
+            gold = [self.label_alphabet.get_instance(self.gold_results[idx][idy]) for idy in range(len(self.gold_results[idx]))]
+            new_pred_results.append(pred)
+            new_gold_results.append(gold)
+
+        return new_pred_results, new_gold_results
+
