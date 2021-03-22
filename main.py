@@ -367,8 +367,8 @@ if __name__ == '__main__':
     parser.add_argument('--model1_layer', default=1)
     parser.add_argument('--bilstm', default=True)
     parser.add_argument('--nsample', default=32, help='sample times in testing period, we use 1 for training period')
-    parser.add_argument('--threshold', default=0.1, help='the threshold to combine results of two stages, '
-                                                         'a smaller one prefers results from the second stage.')
+    parser.add_argument('--threshold', default=1, help='the threshold to combine results of two stages, '
+                                                       'a smaller one prefers results from the second stage.')
 
     parser.add_argument('--max_read_memory', default=10)
 

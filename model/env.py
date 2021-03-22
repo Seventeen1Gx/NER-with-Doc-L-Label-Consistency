@@ -39,6 +39,7 @@ class Env(object):
         self.word_mat = self.data.word_mat
 
         self.max_read_memory = self.data.max_read_memory
+        self.threshold = self.data.threshold
 
         # 数据集
         self.train_Ids = self.data.train_Ids + self.data.dev_Ids
@@ -46,8 +47,8 @@ class Env(object):
         self.train_doc_total_num = len(self.train_Ids)
         self.test_doc_total_num = len(self.test_Ids)
 
-        # print("训练集文章数为 %s" % self.train_doc_total_num)
-        # print("测试集文章数为 %s" % self.test_doc_total_num)
+        print("训练集文章数为 %s" % self.train_doc_total_num)
+        print("测试集文章数为 %s" % self.test_doc_total_num)
 
         # 当前处理的文档
         self.cur_doc_idx = -1
@@ -82,6 +83,7 @@ class Env(object):
         if if_train:
             random.shuffle(self.train_Ids)
 
+        self.cur_doc_idx = -1
         self.next_doc(if_train)
 
         return self.get_state()
@@ -210,8 +212,8 @@ class Env(object):
         # 当前文档单词总数
         self.cur_doc_word_total_num = len(self.pred_label_result)
 
-        print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
-              (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
+        # print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
+        #       (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
 
         # 切换单词
         return self.next_word(if_train)
@@ -222,7 +224,7 @@ class Env(object):
         self.cur_word_reference_idx = -1
 
         if self.cur_word_idx == self.cur_doc_word_total_num:
-            print("当前文档单词处理完毕，处理下一篇文档")
+            # print("当前文档单词处理完毕，处理下一篇文档")
             return self.next_doc(if_train)
 
         while if_train and self.pred_label_result[self.cur_word_idx] == self.gold_label_result[self.cur_word_idx]:
@@ -230,7 +232,15 @@ class Env(object):
             self.cur_word_idx += 1
             self.cur_word_reference_idx = -1
             if self.cur_word_idx == self.cur_doc_word_total_num:
-                print("当前文档单词处理完毕，处理下一篇文档")
+                # print("当前文档单词处理完毕，处理下一篇文档")
+                return self.next_doc(if_train)
+
+        while (not if_train) and self.uncertainty_result[[self.cur_word_idx]] < self.threshold:
+            # print("测试时，跳过不确定度低的单词")
+            self.cur_word_idx += 1
+            self.cur_word_reference_idx = -1
+            if self.cur_word_idx == self.cur_doc_word_total_num:
+                # print("当前文档单词处理完毕，处理下一篇文档")
                 return self.next_doc(if_train)
 
         self.cur_word_reference = self.word_mat[self.cur_doc_num][self.cur_word_idx + 1]
@@ -243,8 +253,8 @@ class Env(object):
             # print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
             return self.next_word(if_train)
 
-        print("当前处理第 %s 个单词，其有 %s 个参考单词" %
-              (self.cur_word_idx, self.cur_word_reference_num))
+        # print("当前处理第 %s 个单词，其有 %s 个参考单词" %
+        #       (self.cur_word_idx, self.cur_word_reference_num))
 
         return self.next_reference(if_train)
 
@@ -252,8 +262,8 @@ class Env(object):
     def next_reference(self, if_train=True):
         self.cur_word_reference_idx += 1
         if self.cur_word_reference_idx == self.cur_word_reference_num:
-            print("当前单词已参考完全部单词，切换下一个单词")
+            # print("当前单词已参考完全部单词，切换下一个单词")
             return self.next_word(if_train)
-        print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
+        # print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
 
         return False

@@ -138,6 +138,9 @@ def dqn_learn(env,
         print("Epoch %s  Time: %.2f s  Total Loss: %.2f" % (epoch_id, end - start, total_loss))
         # 每训练 10000 步，进行一次评估
         if epoch_id % 10000:
+            print("--------------------------------------------------------")
+            print("--------------进入测试阶段")
+
             observation = env.reset(False)
 
             while True:
