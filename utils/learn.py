@@ -56,6 +56,7 @@ def dqn_learn(env,
     for epoch_id in range(EPOCHS):
         print("\n ###### Epoch: %s/%s ######" % (epoch_id, EPOCHS))
         start = time.time()
+        total_loss = 0
         # 环境初始化
         observation = env.reset()
         while True:
@@ -69,13 +70,13 @@ def dqn_learn(env,
             else:
                 action = np.random.randint(NUM_ACTIONS)
             # 执行动作
-            print("------------------------------")
-            print("当前执行的动作是 %s" % action)
+            # print("------------------------------")
+            # print("当前执行的动作是 %s" % action)
             reward, new_obs, done, _ = env.step(action)
-            if not done:
-                print("获得的奖励是 %s" % reward)
-            else:
-                print("已处理完所有文档")
+            # if not done:
+            #    print("获得的奖励是 %s" % reward)
+            # else:
+            #    print("已处理完所有文档")
 
             replay_buffer.append((observation, action, reward, new_obs, done))
             if len(replay_buffer) > REPLAY_SIZE:
@@ -87,7 +88,7 @@ def dqn_learn(env,
                 break
 
             if len(replay_buffer) > BATCH_SIZE:
-                print("执行经验回放")
+                # print("执行经验回放")
 
                 # 首先准备输入数据
                 minibatch = random.sample(replay_buffer, BATCH_SIZE)
@@ -123,6 +124,8 @@ def dqn_learn(env,
 
                 loss = loss_func(q_s_a, target_v)
 
+                total_loss += loss.item()
+
                 optimizer.zero_grad()
                 loss.backward()
 
@@ -132,7 +135,7 @@ def dqn_learn(env,
                 if num_param_updates % REPLACE_TARGET_FREQ == 0:
                     Q_target.load_state_dict(Q.state_dict())
         end = time.time()
-        print("Epoch %s  Time: %.2f s" % (epoch_id, end - start))
+        print("Epoch %s  Time: %.2f s  Total Loss: %.2f" % (epoch_id, end - start, total_loss))
         # 每训练 10000 步，进行一次评估
         if epoch_id % 10000:
             observation = env.reset(False)

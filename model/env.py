@@ -225,9 +225,13 @@ class Env(object):
             print("当前文档单词处理完毕，处理下一篇文档")
             return self.next_doc(if_train)
 
-        if if_train and self.pred_label_result[self.cur_word_idx] == self.gold_label_result[self.cur_word_idx]:
-            print("训练时，跳过预测正确的单词")
-            return self.next_word()
+        while if_train and self.pred_label_result[self.cur_word_idx] == self.gold_label_result[self.cur_word_idx]:
+            # print("训练时，跳过预测正确的单词")
+            self.cur_word_idx += 1
+            self.cur_word_reference_idx = -1
+            if self.cur_word_idx == self.cur_doc_word_total_num:
+                print("当前文档单词处理完毕，处理下一篇文档")
+                return self.next_doc(if_train)
 
         self.cur_word_reference = self.word_mat[self.cur_doc_num][self.cur_word_idx + 1]
         try:
@@ -236,7 +240,7 @@ class Env(object):
             self.cur_word_reference_num = self.max_read_memory
         # 跳过单独出现的单词
         if self.cur_word_reference_num == 0:
-            print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
+            # print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
             return self.next_word(if_train)
 
         print("当前处理第 %s 个单词，其有 %s 个参考单词" %
