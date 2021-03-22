@@ -13,8 +13,8 @@ from utils.schedule import LinearSchedule
 
 
 USE_CUDA = torch.cuda.is_available()
-dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
-dlongtype = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
+DTYPE = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+DLONGTYPE = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTensor
 
 
 # 相关超参数设定
@@ -41,7 +41,7 @@ optimizer = OptimizerSpec(
 
 
 def dqn_learn(env,
-              exploration=LinearSchedule(1000000, 0.1),
+              exploration=LinearSchedule(500000, 0.1),
               optimizer_spec=optimizer):
     # 初始化
     Q = DQN(STATE_VEC_DIM, DQN_HIDDEN_DIM1, DQN_HIDDEN_DIM2, NUM_ACTIONS)
@@ -64,7 +64,7 @@ def dqn_learn(env,
             sample = random.random()
             threshold = exploration.value(epoch_id)
             if sample > threshold:
-                observation = torch.tensor(observation).unsqueeze(0).type(dtype)
+                observation = torch.tensor(observation).unsqueeze(0).type(DTYPE)
                 value = Q(observation).cpu().data.numpy()
                 action = value.argmax(-1)[0]
             else:
@@ -84,9 +84,6 @@ def dqn_learn(env,
 
             observation = new_obs
 
-            if done:
-                break
-
             if len(replay_buffer) > BATCH_SIZE:
                 # print("执行经验回放")
 
@@ -98,13 +95,13 @@ def dqn_learn(env,
                 next_state_batch = [data[3] for data in minibatch]
                 done_batch = [data[4] for data in minibatch]
                 # 第一维是 batch_size
-                state_tensor = torch.tensor(state_batch).type(dtype)
-                action_tensor = torch.tensor(action_batch).type(dlongtype)
-                reward_tensor = torch.tensor(reward_batch).type(dtype)
+                state_tensor = torch.tensor(state_batch).type(DTYPE)
+                action_tensor = torch.tensor(action_batch).type(DLONGTYPE)
+                reward_tensor = torch.tensor(reward_batch).type(DTYPE)
                 # 归一化
                 # reward_tensor = (reward_tensor - reward_tensor.mean()) / (reward_tensor.std() + 1e-7)
-                next_state_tensor = torch.tensor(next_state_batch).type(dtype)
-                done_tensor = torch.tensor(done_batch).type(dtype)
+                next_state_tensor = torch.tensor(next_state_batch).type(DTYPE)
+                done_tensor = torch.tensor(done_batch).type(DTYPE)
 
                 # Q 网络得到的估计值
                 q_values = Q(state_tensor)
@@ -134,17 +131,21 @@ def dqn_learn(env,
                 num_param_updates += 1
                 if num_param_updates % REPLACE_TARGET_FREQ == 0:
                     Q_target.load_state_dict(Q.state_dict())
+
+            if done:
+                break
+
         end = time.time()
         print("Epoch %s  Time: %.2f s  Total Loss: %.2f" % (epoch_id, end - start, total_loss))
         # 每训练 10000 步，进行一次评估
-        if epoch_id % 10000:
+        if epoch_id % 10000 == 0:
             print("--------------------------------------------------------")
             print("--------------进入测试阶段")
 
             observation = env.reset(False)
 
             while True:
-                observation = torch.tensor(observation).unsqueeze(0).type(dtype)
+                observation = torch.tensor(observation).unsqueeze(0).type(DTYPE)
                 value = Q(observation).cpu().data.numpy()
                 action = value.argmax(-1)[0]
                 reward, new_obs, done, info = env.step(action, False)

@@ -75,6 +75,12 @@ class Env(object):
         self.gold_results = []
         self.pred_results = []
 
+        # 结束状态向量
+        self.state_dim = None
+        self.end_state = None
+
+        self.time_step = -1
+
     # 环境初始化
     # 返回初始状态向量
     def reset(self, if_train=True):
@@ -119,6 +125,17 @@ class Env(object):
         else:
             info = (self.gold_results, self.pred_results)
 
+        if if_train:
+            self.time_step += 1
+            if self.time_step % 1000 == 0:
+                print("---------- Time Step %s ----------" % self.time_step)
+                print("当前处理的文档数为", self.train_doc_total_num)
+                print("当前处理第 %s 篇文档" % self.cur_doc_idx)
+                print("当前文档有单词数", self.cur_doc_word_total_num)
+                print("当前处理第 %s 个单词" % self.cur_word_idx)
+                print("该单词可以参考的单词数", self.cur_word_reference_num)
+                print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
+
         return reward, new_state, done, info
 
     def get_state(self):
@@ -137,6 +154,11 @@ class Env(object):
         state.append(self.uncertainty_result[self.cur_word_idx])
         state.append(self.uncertainty_result[self.cur_word_reference[self.cur_word_reference_idx] - 1])
         state.append(abs(state[-1] - state[-2]))
+
+        if self.state_dim is None:
+            self.state_dim = len(state)
+            self.end_state = [0] * self.state_dim
+
         return state
 
     # 使用基础模型，逐文档进行处理，并保存中间结果，供强化学习使用
