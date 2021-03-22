@@ -81,10 +81,15 @@ class Env(object):
 
         self.time_step = -1
 
+        # 当前处理单词执行过的 action 数
+        self.action_num = 0
+
     # 环境初始化
     # 返回初始状态向量
     def reset(self, if_train=True):
         print("Environment initializing...")
+
+        self.time_step = -1
 
         if if_train:
             random.shuffle(self.train_Ids)
@@ -125,17 +130,19 @@ class Env(object):
         else:
             info = (self.gold_results, self.pred_results)
 
-        if if_train:
-            self.time_step += 1
-            if self.time_step % 1000 == 0:
-                print("---------- Time Step %s ----------" % self.time_step)
-                print("当前处理的文档数为", self.train_doc_total_num)
-                print("当前处理第 %s 篇文档" % self.cur_doc_idx)
-                print("当前文档有单词数", self.cur_doc_word_total_num)
-                print("当前处理第 %s 个单词" % self.cur_word_idx)
-                print("该单词可以参考的单词数", self.cur_word_reference_num)
-                print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
-                self.time_step = 0
+        self.time_step += 1
+        if self.time_step % 1000 == 0:
+            print("---------- Time Step %s ----------" % self.time_step)
+            print("当前处理的文档数为", self.train_doc_total_num if if_train else self.test_doc_total_num, end=' ')
+            print("当前处理第 %s 篇文档" % self.cur_doc_idx)
+            print("当前文档有单词数", self.cur_doc_word_total_num, end=' ')
+            print("当前处理第 %s 个单词" % self.cur_word_idx)
+            print("该单词可以参考的单词数", self.cur_word_reference_num, end=' ')
+            print("当前查看其第 %s 个参考" % self.cur_word_reference_idx)
+
+        if (not if_train) and self.action_num == 100:
+            print("当前单词处理动作数超过了 100 个，切换下一个单词")
+            done = self.next_word(if_train)
 
         return reward, new_state, done, info
 
@@ -243,6 +250,8 @@ class Env(object):
 
     # 切换单词
     def next_word(self, if_train=True):
+        self.action_num = 0
+
         self.cur_word_idx += 1
         self.cur_word_reference_idx = -1
 
