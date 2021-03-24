@@ -18,15 +18,15 @@ DLONGTYPE = torch.cuda.LongTensor if torch.cuda.is_available() else torch.LongTe
 
 
 # 相关超参数设定
-EPOCHS = 500000
+EPOCHS = 200000
 STATE_VEC_DIM = 400 + 400 + 18 + 18 + 1 + 3 + 3
 DQN_HIDDEN_DIM1 = 1000
 DQN_HIDDEN_DIM2 = 500
 NUM_ACTIONS = 19
 
-GAMMA = 0.9
-REPLAY_SIZE = 1000000
-BATCH_SIZE = 32
+GAMMA = 0.99
+REPLAY_SIZE = 8000
+BATCH_SIZE = 256
 REPLACE_TARGET_FREQ = 10000
 
 LEARNING_RATE = 0.00025
@@ -41,7 +41,7 @@ optimizer = OptimizerSpec(
 
 
 def dqn_learn(env,
-              exploration=LinearSchedule(500000, 0.1),
+              exploration=LinearSchedule(EPOCHS // 2, 0.1),
               optimizer_spec=optimizer):
     # 初始化
     Q = DQN(STATE_VEC_DIM, DQN_HIDDEN_DIM1, DQN_HIDDEN_DIM2, NUM_ACTIONS)
@@ -58,13 +58,13 @@ def dqn_learn(env,
         start = time.time()
         total_loss = 0
         # 环境初始化
-        observation = env.reset()
+        obs = env.reset()
         while True:
             # 选择动作
             sample = random.random()
             threshold = exploration.value(epoch_id)
             if sample > threshold:
-                observation = torch.tensor(observation).unsqueeze(0).type(DTYPE)
+                observation = torch.tensor(obs).unsqueeze(0).type(DTYPE)
                 value = Q(observation).cpu().data.numpy()
                 action = value.argmax(-1)[0]
             else:
@@ -78,11 +78,11 @@ def dqn_learn(env,
             # else:
             #    print("已处理完所有文档")
 
-            replay_buffer.append((observation, action, reward, new_obs, done))
+            replay_buffer.append((obs, action, reward, new_obs, done))
             if len(replay_buffer) > REPLAY_SIZE:
                 replay_buffer.popleft()
 
-            observation = new_obs
+            obs = new_obs
 
             if len(replay_buffer) > BATCH_SIZE:
                 # print("执行经验回放")
@@ -121,6 +121,8 @@ def dqn_learn(env,
 
                 loss = loss_func(q_s_a, target_v)
 
+                loss = loss / BATCH_SIZE
+
                 total_loss += loss.item()
 
                 optimizer.zero_grad()
@@ -142,14 +144,14 @@ def dqn_learn(env,
             print("--------------------------------------------------------")
             print("--------------进入测试阶段")
 
-            observation = env.reset(False)
+            obs = env.reset(False)
 
             while True:
-                observation = torch.tensor(observation).unsqueeze(0).type(DTYPE)
+                observation = torch.tensor(obs).unsqueeze(0).type(DTYPE)
                 value = Q(observation).cpu().data.numpy()
                 action = value.argmax(-1)[0]
                 reward, new_obs, done, info = env.step(action, False)
-                observation = new_obs
+                obs = new_obs
                 if done:
                     gold_results = info[0]
                     pred_results = info[1]

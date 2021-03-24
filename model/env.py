@@ -117,6 +117,10 @@ class Env(object):
             self.pred_label_result[self.cur_word_idx] = action + 1
             reward += 1 if self.pred_label_result[self.cur_word_idx] \
                 == self.gold_label_result[self.cur_word_idx] else 0
+
+            if if_train:
+                # 训练时，一个单词只变一次
+                done = self.next_word(if_train)
         elif action == 17:
             # 拒绝
             # print("切换下一个参考单词")
