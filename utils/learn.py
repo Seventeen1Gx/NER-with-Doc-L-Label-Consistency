@@ -22,7 +22,7 @@ EPOCHS = 200000
 STATE_VEC_DIM = 400 + 400 + 18 + 18 + 1 + 3 + 3
 DQN_HIDDEN_DIM1 = 1000
 DQN_HIDDEN_DIM2 = 500
-NUM_ACTIONS = 19
+NUM_ACTIONS = 18
 
 GAMMA = 0.99
 REPLAY_SIZE = 8000
@@ -58,25 +58,19 @@ def dqn_learn(env,
         start = time.time()
         total_loss = 0
         # 环境初始化
-        obs = env.reset()
+        obs = env.reset()  # obs 是一个 list
         while True:
             # 选择动作
             sample = random.random()
             threshold = exploration.value(epoch_id)
             if sample > threshold:
-                observation = torch.tensor(obs).unsqueeze(0).type(DTYPE)
+                observation = torch.tensor(obs).unsqueeze(0).type(DTYPE)  # observation 是一个 tensor
                 value = Q(observation).cpu().data.numpy()
                 action = value.argmax(-1)[0]
             else:
                 action = np.random.randint(NUM_ACTIONS)
             # 执行动作
-            # print("------------------------------")
-            # print("当前执行的动作是 %s" % action)
             reward, new_obs, done, _ = env.step(action)
-            # if not done:
-            #    print("获得的奖励是 %s" % reward)
-            # else:
-            #    print("已处理完所有文档")
 
             replay_buffer.append((obs, action, reward, new_obs, done))
             if len(replay_buffer) > REPLAY_SIZE:
@@ -98,8 +92,6 @@ def dqn_learn(env,
                 state_tensor = torch.tensor(state_batch).type(DTYPE)
                 action_tensor = torch.tensor(action_batch).type(DLONGTYPE)
                 reward_tensor = torch.tensor(reward_batch).type(DTYPE)
-                # 归一化
-                # reward_tensor = (reward_tensor - reward_tensor.mean()) / (reward_tensor.std() + 1e-7)
                 next_state_tensor = torch.tensor(next_state_batch).type(DTYPE)
                 done_tensor = torch.tensor(done_batch).type(DTYPE)
 
@@ -121,13 +113,10 @@ def dqn_learn(env,
 
                 loss = loss_func(q_s_a, target_v)
 
-                loss = loss / BATCH_SIZE
-
                 total_loss += loss.item()
 
                 optimizer.zero_grad()
                 loss.backward()
-
                 optimizer.step()
 
                 num_param_updates += 1
@@ -140,9 +129,10 @@ def dqn_learn(env,
         end = time.time()
         print("Epoch %s  Time: %.2f s  Total Loss: %.2f" % (epoch_id, end - start, total_loss))
         # 每训练 10000 步，进行一次评估
-        if epoch_id % 10 == 0:
+        if epoch_id % 5 == 0:
             print("--------------------------------------------------------")
             print("--------------进入测试阶段")
+            print("--------------------------------------------------------")
 
             obs = env.reset(False)
 

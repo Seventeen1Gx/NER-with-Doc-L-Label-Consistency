@@ -83,9 +83,6 @@ class Env(object):
 
         self.time_step = -1
 
-        # 当前处理单词执行过的 action 数
-        self.action_num = -1
-
     # 环境初始化
     # 返回初始状态向量
     def reset(self, if_train=True):
@@ -102,37 +99,24 @@ class Env(object):
         return self.get_state()
 
     def step(self, action, if_train=True):
-        reward = -0.1
+        reward = 0
         done = False
         info = None
 
         if -1 < action < 17:
-            # print("当前单词的正确标签是 %s" % self.gold_label_result[self.cur_word_idx])
-            # print("当前单词的预测标签是 %s" % self.pred_label_result[self.cur_word_idx])
-            # print("当前单词的要变成的标签是 %s" % (action + 1))
+            print("------------------------------------------")
+            print("当前单词的正确标签是 %s" % self.gold_label_result[self.cur_word_idx])
+            print("当前单词的预测标签是 %s" % self.pred_label_result[self.cur_word_idx])
+            print("当前单词的要变成的标签是 %s" % (action + 1))
 
             # 当前标签变为 action+1
-            reward += -1 if self.pred_label_result[self.cur_word_idx] \
-                == self.gold_label_result[self.cur_word_idx] else 0
-            self.pred_label_result[self.cur_word_idx] = action + 1
-            reward += 1 if self.pred_label_result[self.cur_word_idx] \
-                == self.gold_label_result[self.cur_word_idx] else 0
+            reward += 1 if (action + 1) \
+                == self.gold_label_result[self.cur_word_idx] else -1
 
-            if if_train:
-                # 训练时，一个单词只变一次
-                done = self.next_word(if_train)
+            done = self.next_word(if_train)
         elif action == 17:
-            # 拒绝
             # print("切换下一个参考单词")
             done = self.next_reference(if_train)
-        elif action == 18:
-            # 停止
-            # print("处理下一个单词")
-            done = self.next_word(if_train)
-
-        self.action_num += 1
-        if (not if_train) and self.action_num == 20:
-            done = self.next_word(if_train)
 
         if not done:
             new_state = self.get_state()
@@ -141,7 +125,7 @@ class Env(object):
             new_state = self.end_state
 
         self.time_step += 1
-        if self.time_step % 10000 == 0:
+        if self.time_step % 1000 == 0:
             print("---------- Time Step %s ----------" % self.time_step)
             print("当前处理的文档数为", self.train_doc_total_num if if_train else self.test_doc_total_num, end=' ')
             print("当前处理第 %s 篇文档" % self.cur_doc_idx)
@@ -248,16 +232,14 @@ class Env(object):
         # 当前文档单词总数
         self.cur_doc_word_total_num = len(self.pred_label_result)
 
-        # print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
-        #       (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
+        print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
+              (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
 
         # 切换单词
         return self.next_word(if_train)
 
     # 切换单词
     def next_word(self, if_train=True):
-        self.action_num = 0
-
         self.cur_word_idx += 1
         self.cur_word_reference_idx = -1
 
@@ -291,8 +273,8 @@ class Env(object):
             # print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
             return self.next_word(if_train)
 
-        # print("当前处理第 %s 个单词，其有 %s 个参考单词" %
-        #       (self.cur_word_idx, self.cur_word_reference_num))
+        print("当前处理第 %s 个单词，其有 %s 个参考单词" %
+              (self.cur_word_idx, self.cur_word_reference_num))
 
         return self.next_reference(if_train)
 
