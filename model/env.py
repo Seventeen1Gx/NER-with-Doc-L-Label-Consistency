@@ -90,8 +90,8 @@ class Env(object):
 
         self.time_step = -1
 
-        if if_train:
-            random.shuffle(self.train_Ids)
+        # if if_train:
+        #     random.shuffle(self.train_Ids)
 
         self.cur_doc_idx = -1
         self.next_doc(if_train)
@@ -116,6 +116,7 @@ class Env(object):
             done = self.next_word(if_train)
         elif action == 17:
             # print("切换下一个参考单词")
+            reward += 0.1
             done = self.next_reference(if_train)
 
         if not done:
