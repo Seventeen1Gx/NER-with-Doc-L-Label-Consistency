@@ -104,10 +104,10 @@ class Env(object):
         info = None
 
         if -1 < action < 17:
-            print("------------------------------------------")
-            print("当前单词的正确标签是 %s" % self.gold_label_result[self.cur_word_idx])
-            print("当前单词的预测标签是 %s" % self.pred_label_result[self.cur_word_idx])
-            print("当前单词的要变成的标签是 %s" % (action + 1))
+            # print("------------------------------------------")
+            # print("当前单词的正确标签是 %s" % self.gold_label_result[self.cur_word_idx])
+            # print("当前单词的预测标签是 %s" % self.pred_label_result[self.cur_word_idx])
+            # print("当前单词的要变成的标签是 %s" % (action + 1))
 
             # 当前标签变为 action+1
             reward += 1 if (action + 1) \
@@ -232,8 +232,8 @@ class Env(object):
         # 当前文档单词总数
         self.cur_doc_word_total_num = len(self.pred_label_result)
 
-        print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
-              (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
+        # print("当前处理第 %s 篇文章，文章号码为 %s，当前文章单词数为 %s" %
+        #       (self.cur_doc_idx, self.cur_doc_num, self.cur_doc_word_total_num))
 
         # 切换单词
         return self.next_word(if_train)
@@ -273,8 +273,8 @@ class Env(object):
             # print("当前处理第 %s 个单词，其没有参考单词，故跳过" % self.cur_word_idx)
             return self.next_word(if_train)
 
-        print("当前处理第 %s 个单词，其有 %s 个参考单词" %
-              (self.cur_word_idx, self.cur_word_reference_num))
+        # print("当前处理第 %s 个单词，其有 %s 个参考单词" %
+        #       (self.cur_word_idx, self.cur_word_reference_num))
 
         return self.next_reference(if_train)
 
