@@ -1,4 +1,6 @@
 import random
+import time
+import copy
 
 import torch
 
@@ -51,6 +53,16 @@ class Env(object):
 
         print("训练集文章数为 %s" % self.train_doc_total_num)
         print("测试集文章数为 %s" % self.test_doc_total_num)
+
+        self.pred_label_total_result = [0] * (self.train_doc_total_num + self.test_doc_total_num)
+        self.gold_label_total_result = [0] * (self.train_doc_total_num + self.test_doc_total_num)
+        self.uncertainty_total_result = [0] * (self.train_doc_total_num + self.test_doc_total_num)
+        self.lstm_out_total_result = [0] * (self.train_doc_total_num + self.test_doc_total_num)
+        self.outs_total_result = [0] * (self.train_doc_total_num + self.test_doc_total_num)
+        start = time.time()
+        self.get_all_result()
+        end = time.time()
+        print("使用基模型获得所有预测结果使用时: %.2fs" % (start-end))
 
         # 当前处理的文档
         self.cur_doc_idx = -1
@@ -110,6 +122,7 @@ class Env(object):
             # print("当前单词的要变成的标签是 %s" % (action + 1))
 
             # 当前标签变为 action+1
+            self.pred_label_result[self.cur_word_idx] = action + 1
             reward += 1 if (action + 1) \
                 == self.gold_label_result[self.cur_word_idx] else -1
 
@@ -159,6 +172,29 @@ class Env(object):
             self.end_state = [0] * self.state_dim
 
         return state
+
+    def get_all_result(self):
+        for i in range(self.train_doc_total_num):
+            document = self.train_Ids[i:i+1]
+            doc_num = document[0][0][4]
+            pred_label_result, gold_label_result, lstm_out_result, \
+                outs_result, uncertainty_result = self.predict_by_base_model(self.model, document)
+            self.pred_label_total_result[doc_num] = pred_label_result
+            self.gold_label_total_result[doc_num] = gold_label_result
+            self.uncertainty_total_result[doc_num] = uncertainty_result
+            self.outs_total_result[doc_num] = outs_result
+            self.lstm_out_total_result[doc_num] = lstm_out_result
+
+        for i in range(self.test_doc_total_num):
+            document = self.test_Ids[i:i+1]
+            doc_num = document[0][0][4]
+            pred_label_result, gold_label_result, lstm_out_result, \
+                outs_result, uncertainty_result = self.predict_by_base_model(self.model, document)
+            self.pred_label_total_result[doc_num] = pred_label_result
+            self.gold_label_total_result[doc_num] = gold_label_result
+            self.uncertainty_total_result[doc_num] = uncertainty_result
+            self.outs_total_result[doc_num] = outs_result
+            self.lstm_out_total_result[doc_num] = lstm_out_result
 
     # 使用基础模型，逐文档进行处理，并保存中间结果，供强化学习使用
     def predict_by_base_model(self, model, instance):
@@ -228,8 +264,12 @@ class Env(object):
         document = doc_Ids[self.cur_doc_idx:self.cur_doc_idx + 1]
         # Ids: 文档数 × 句子数 × [word_Ids, char_Ids, label_Ids, word_idx, d_idx]
         self.cur_doc_num = document[0][0][4]
-        self.pred_label_result, self.gold_label_result, self.lstm_out_result, self.outs_result, \
-            self.uncertainty_result = self.predict_by_base_model(self.model, document)
+        self.pred_label_result = copy.deepcopy(self.pred_label_total_result[self.cur_doc_num])
+        self.gold_label_result = self.gold_label_total_result[self.cur_doc_num]
+        self.lstm_out_result = self.lstm_out_total_result[self.cur_doc_num]
+        self.outs_result = self.outs_total_result[self.cur_doc_num]
+        self.uncertainty_result = self.uncertainty_total_result[self.cur_doc_num]
+
         # 当前文档单词总数
         self.cur_doc_word_total_num = len(self.pred_label_result)
 
