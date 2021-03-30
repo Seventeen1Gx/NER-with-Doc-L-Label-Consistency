@@ -49,7 +49,7 @@ def dqn_learn(env,
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
     replay_buffer = deque()
 
-    loss_func = torch.nn.MSELoss()
+    # loss_func = torch.nn.MSELoss()
 
     num_param_updates = 0
 
@@ -109,14 +109,13 @@ def dqn_learn(env,
                 # .max(1) 按第 2 个维度求最大值，返回最大值以及索引
                 # 所以用 [0] 取最大动作值
                 # Q_target(next_state_tensor).max(1)[0]: batch_size
-                target_v = reward_tensor + GAMMA * (1 - done_tensor) * Q_target(next_state_tensor).detach().max(1)[0]
+                error = reward_tensor + GAMMA * (1 - done_tensor) * Q_target(next_state_tensor).detach().max(1)[0] - q_s_a
+                clipped_error = -1.0 * error.clamp(-1, 1)
 
-                loss = loss_func(q_s_a, target_v)
-
-                total_loss += loss.item()
+                # total_loss += loss.item()
 
                 optimizer.zero_grad()
-                loss.backward()
+                q_s_a.backward(clipped_error.data.unsqueeze(1))
                 optimizer.step()
 
                 num_param_updates += 1

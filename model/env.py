@@ -62,7 +62,7 @@ class Env(object):
         start = time.time()
         self.get_all_result()
         end = time.time()
-        print("使用基模型获得所有预测结果使用时: %.2fs" % (start-end))
+        print("使用基模型获得所有预测结果使用时: %.2fs" % (end-start))
 
         # 当前处理的文档
         self.cur_doc_idx = -1
@@ -104,6 +104,10 @@ class Env(object):
 
         # if if_train:
         #     random.shuffle(self.train_Ids)
+
+        if not if_train:
+            self.gold_results = []
+            self.pred_results = []
 
         self.cur_doc_idx = -1
         self.next_doc(if_train)
@@ -241,7 +245,7 @@ class Env(object):
 
     # 切换文章
     def next_doc(self, if_train=True):
-        if not if_train:
+        if (not if_train) and self.cur_word_idx != -1:
             # 统计上一篇文章的处理结果
             self.gold_results.append(self.gold_label_result)
             self.pred_results.append(self.pred_label_result)
@@ -334,9 +338,11 @@ class Env(object):
         new_pred_results = []
         new_gold_results = []
 
-        for idx in range(len(self.pred_results)):
-            pred = [self.label_alphabet.get_instance(self.pred_results[idx][idy]) for idy in range(len(self.pred_results[idx]))]
-            gold = [self.label_alphabet.get_instance(self.gold_results[idx][idy]) for idy in range(len(self.gold_results[idx]))]
+        for idx in range(len(self.pred_results)):  # 按文章遍历
+            pred = [self.label_alphabet.get_instance(self.pred_results[idx][idy])
+                    for idy in range(len(self.pred_results[idx]))]
+            gold = [self.label_alphabet.get_instance(self.gold_results[idx][idy])
+                    for idy in range(len(self.gold_results[idx]))]
             new_pred_results.append(pred)
             new_gold_results.append(gold)
 
