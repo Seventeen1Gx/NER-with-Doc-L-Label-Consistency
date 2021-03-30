@@ -4,6 +4,7 @@ from collections import namedtuple, deque
 
 import torch
 from torch import optim
+from torch.autograd import Variable
 import numpy as np
 
 from model.dqn import DQN
@@ -49,7 +50,7 @@ def dqn_learn(env,
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
     replay_buffer = deque()
 
-    # loss_func = torch.nn.MSELoss()
+    loss_func = torch.nn.MSELoss()
 
     num_param_updates = 0
 
@@ -89,11 +90,11 @@ def dqn_learn(env,
                 next_state_batch = [data[3] for data in minibatch]
                 done_batch = [data[4] for data in minibatch]
                 # 第一维是 batch_size
-                state_tensor = torch.tensor(state_batch).type(DTYPE)
-                action_tensor = torch.tensor(action_batch).type(DLONGTYPE)
-                reward_tensor = torch.tensor(reward_batch).type(DTYPE)
-                next_state_tensor = torch.tensor(next_state_batch).type(DTYPE)
-                done_tensor = torch.tensor(done_batch).type(DTYPE)
+                state_tensor = Variable(torch.tensor(state_batch).type(DTYPE))
+                action_tensor = Variable(torch.tensor(action_batch).type(DLONGTYPE))
+                reward_tensor = Variable(torch.tensor(reward_batch).type(DTYPE))
+                next_state_tensor = Variable(torch.tensor(next_state_batch).type(DTYPE))
+                done_tensor = Variable(torch.tensor(done_batch).type(DTYPE))
 
                 # Q 网络得到的估计值
                 q_values = Q(state_tensor)
@@ -109,13 +110,14 @@ def dqn_learn(env,
                 # .max(1) 按第 2 个维度求最大值，返回最大值以及索引
                 # 所以用 [0] 取最大动作值
                 # Q_target(next_state_tensor).max(1)[0]: batch_size
-                error = reward_tensor + GAMMA * (1 - done_tensor) * Q_target(next_state_tensor).detach().max(1)[0] - q_s_a
-                clipped_error = -1.0 * error.clamp(-1, 1)
+                target_v = reward_tensor + GAMMA * (1 - done_tensor) * Q_target(next_state_tensor).detach().max(1)[0]
 
-                # total_loss += loss.item()
+                loss = loss_func(q_s_a, target_v)
+
+                total_loss += loss.item()
 
                 optimizer.zero_grad()
-                q_s_a.backward(clipped_error.data)
+                loss.backward()
                 optimizer.step()
 
                 num_param_updates += 1
