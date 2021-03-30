@@ -115,7 +115,7 @@ def dqn_learn(env,
                 # total_loss += loss.item()
 
                 optimizer.zero_grad()
-                q_s_a.backward(clipped_error.data.unsqueeze(1))
+                q_s_a.backward(clipped_error.data)
                 optimizer.step()
 
                 num_param_updates += 1
