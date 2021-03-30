@@ -55,7 +55,7 @@ def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
         f_measure = -1
     else:
         f_measure = 2*precision*recall/(precision+recall)
-    # 按 token 来看的精确率
+    # 按 token 来看的准确率
     accuracy = (right_tag+0.0)/all_tag
     return accuracy, precision, recall, f_measure
 
